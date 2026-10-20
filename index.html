@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Abrázame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000; --ink:#fff; --dim:rgba(255,255,255,.34); --faint:rgba(255,255,255,.14);
+  --red:#fa2d48; --red2:#b3001b;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+
+/* ---- Fondo animado (manchas rojas difuminadas) ---- */
+#bg{position:fixed;inset:-20%;z-index:-1;filter:blur(70px) saturate(1.2);opacity:.75}
+#bg i{position:absolute;border-radius:50%;animation:drift 22s ease-in-out infinite alternate}
+#bg i:nth-child(1){width:60vmax;height:60vmax;left:-10%;top:-15%;background:var(--red2)}
+#bg i:nth-child(2){width:45vmax;height:45vmax;right:-10%;top:30%;background:var(--red);opacity:.55;animation-duration:28s;animation-delay:-8s}
+#bg i:nth-child(3){width:50vmax;height:50vmax;left:10%;bottom:-25%;background:#3a0008;animation-duration:34s;animation-delay:-15s}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8vmax,6vmax) scale(1.15)}100%{transform:translate(-6vmax,10vmax) scale(.9)}}
+#bg::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.55))}
+
+#app{height:100dvh;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 14px) 22px calc(env(safe-area-inset-bottom) + 14px)}
+
+/* ---- Cabecera estilo "reproduciendo" ---- */
+header{display:flex;align-items:center;gap:12px;padding-bottom:6px}
+.art{flex:none;width:46px;height:46px;border-radius:8px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,var(--red),var(--red2) 55%,#1a0004);box-shadow:0 6px 18px rgba(0,0,0,.45);font-size:20px}
+header b{display:block;font-size:16px;font-weight:700}
+header span{display:block;font-size:14px;color:rgba(255,255,255,.6)}
+
+/* ---- Letra ---- */
+#lyrics{flex:1 1 auto;position:relative;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 14%,#000 80%,transparent);
+          mask-image:linear-gradient(transparent,#000 14%,#000 80%,transparent)}
+#track{position:absolute;left:0;right:0;top:34%;transition:transform .8s cubic-bezier(.25,.8,.25,1)}
+.line{font-weight:800;font-size:clamp(26px,7.6vw,36px);line-height:1.18;letter-spacing:-.02em;
+  padding:12px 0;color:var(--dim);transform-origin:left center;transform:scale(.96);
+  transition:transform .6s cubic-bezier(.25,.8,.25,1),color .6s,filter .6s,opacity .6s}
+.line.active{transform:scale(1);filter:none !important}
+.line.done{color:rgba(255,255,255,.22)}
+.line .c{transition:color .18s,text-shadow .18s}
+.line.active .c.s{color:#fff;text-shadow:0 0 18px rgba(255,255,255,.35)}
+.line.gap{letter-spacing:.3em}
+.line.gap.active{color:#fff;animation:breathe 1.8s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.12)}}
+
+/* ---- Mensaje que se va formando ---- */
+#msg{flex:none;position:relative;height:30%;margin:10px 0 14px;padding:16px 18px;border-radius:22px;
+  overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);
+  -webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4)}
+#msg::-webkit-scrollbar{display:none}
+#msgText{font-weight:800;font-size:clamp(19px,5.4vw,24px);line-height:1.25;letter-spacing:-.01em}
+.w{display:inline-block;white-space:nowrap}
+.m{display:inline-block;position:relative;color:transparent}
+.m::after{content:'';position:absolute;left:50%;bottom:.32em;width:4px;height:4px;margin-left:-2px;
+  border-radius:50%;background:var(--faint)}
+.m.on{color:#fff;animation:pop .7s ease-out}
+.m.on::after{display:none}
+@keyframes pop{0%{transform:scale(1.8);color:var(--red);text-shadow:0 0 16px var(--red)}100%{transform:scale(1)}}
+.fly{position:fixed;left:0;top:0;z-index:5;pointer-events:none;will-change:transform,opacity;
+  font-family:var(--sans);font-weight:800;color:var(--red);text-shadow:0 0 12px rgba(250,45,72,.9),0 0 26px rgba(250,45,72,.6)}
+
+/* ---- Controles ---- */
+#bar{position:relative;height:5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+#fill{position:absolute;inset:0;width:0;background:rgba(255,255,255,.85);border-radius:3px}
+#times{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:rgba(255,255,255,.5);
+  margin-top:7px;font-variant-numeric:tabular-nums}
+#pp{display:block;margin:4px auto 0;width:58px;height:58px;border:0;background:none;color:#fff}
+#pp svg{width:38px;height:38px;fill:currentColor}
+#pp .i-play{display:none}
+#pp.paused .i-play{display:inline}
+#pp.paused .i-pause{display:none}
+
+/* ---- Final ---- */
+#end{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 96px);text-align:center;
+  opacity:0;pointer-events:none;transition:opacity 1.2s}
+#end.show{opacity:1;pointer-events:auto}
+#end button{background:var(--red);border:0;color:#fff;font:600 15px var(--sans);padding:12px 26px;border-radius:99px;
+  box-shadow:0 8px 24px rgba(250,45,72,.4)}
+
+/* ---- Pantalla de inicio ---- */
+#start{cursor:pointer;position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:24px;text-align:center;background:#000;transition:opacity .9s,transform .9s}
+#start.hide{opacity:0;transform:scale(1.04);pointer-events:none}
+#start .art{width:min(68vw,300px);height:min(68vw,300px);border-radius:14px;font-size:84px;margin-bottom:18px;
+  box-shadow:0 30px 70px rgba(250,45,72,.35)}
+#start h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+#start h2{font-size:18px;font-weight:500;color:var(--red)}
+#start p{color:rgba(255,255,255,.5);font-size:14px;max-width:30ch;margin-top:6px}
+#heart{margin-top:18px;width:72px;height:72px;border-radius:50%;border:0;background:var(--red);color:#fff;
+  display:grid;place-items:center;box-shadow:0 0 0 0 rgba(250,45,72,.6);animation:beat 1.8s infinite}
+#heart svg{width:30px;height:30px;fill:#fff;margin-left:4px}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(250,45,72,.55)}70%{box-shadow:0 0 0 20px rgba(250,45,72,0)}100%{box-shadow:0 0 0 0 rgba(250,45,72,0)}}
+#err{color:var(--red);font-size:13px;display:none}
+
+/* ---- Aviso si el navegador bloquea el audio ---- */
+#hint{position:fixed;left:50%;top:40%;z-index:8;transform:translate(-50%,-50%);display:none;
+  padding:14px 24px;border-radius:99px;background:var(--red);color:#fff;font-weight:700;font-size:16px;white-space:nowrap;
+  box-shadow:0 0 0 0 rgba(250,45,72,.6);animation:beat 1.8s infinite}
+#hint.show{display:block}
+
+/* ---- Pregunta final ---- */
+#track.out{opacity:0;filter:blur(10px);transition:opacity 1.8s,filter 1.8s}
+#finale{position:fixed;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;pointer-events:none}
+#finale .q{font-weight:800;font-size:clamp(34px,10.5vw,54px);line-height:1.15;letter-spacing:-.02em}
+#finale .q span{display:inline-block;opacity:0;transition:opacity .5s}
+#finale .q span.on{opacity:1}
+#finale.glow .q span{animation:qglow 2.6s ease-in-out infinite}
+@keyframes qglow{50%{text-shadow:0 0 24px rgba(250,45,72,.95),0 0 48px rgba(250,45,72,.5)}}
+.fly.q2{color:#fff;text-shadow:0 0 14px rgba(250,45,72,.8)}
+
+/* ---- Modo sincronizar (solo para ti) ---- */
+#sync{display:none;height:100dvh;overflow:auto;padding:16px;-webkit-user-select:text;user-select:text}
+#sync h2{font-size:20px;margin-bottom:8px}
+#sync p{font-size:14px;color:rgba(255,255,255,.65);margin-bottom:10px;max-width:70ch}
+#sync textarea{width:100%;height:28vh;background:#111;color:#fff;border:1px solid #333;
+  border-radius:10px;padding:10px;font:14px/1.5 ui-monospace,monospace}
+#sync audio{width:100%;margin:10px 0}
+#sync .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+#sync button{background:#1c1c1e;color:#fff;border:1px solid #333;border-radius:10px;padding:10px 14px;font:inherit}
+#tap{width:100%;padding:28px !important;font-size:20px !important;background:var(--red) !important;border:0 !important;font-weight:800}
+#now{font-size:18px;font-weight:700;min-height:1.5em}
+#upnext{color:rgba(255,255,255,.45);min-height:1.5em}
+</style>
+</head>
+<body>
+
+<!-- =====================================================================
+     1) LETRA SINCRONIZADA (formato LRC)
+     Usa  index.html?sync  para generarla tocando un botón mientras suena
+     la canción, y pega aquí el resultado.
+     Una línea vacía con tiempo (ej. "[01:10.00]") marca un silencio o
+     instrumental: la línea anterior termina ahí y se muestra "♪".
+     ===================================================================== -->
+<script type="text/plain" id="letra">
+[00:40.50] Abrázame
+[00:41.90] Como hace la luz del sol
+[00:47.32] Llenándome de calor
+[00:51.84] Si el frío me hace mal
+[00:58.32] Sé que te he hecho sentir
+[01:01.10] Que todo va a estallar
+[01:03.88] Permíteme insistir
+[01:06.50] No quise hacerlo mal
+[01:08.88] Perdóname si yo
+[01:11.56] Te habré causado alguna herida
+[01:18.00] Y ahora te digo
+[01:23.20] No te preocupes, mi amor
+[01:27.78] Escucha cada latido
+[01:31.04] Que te habla al oído
+[01:34.12] Mi corazón
+[01:36.58]
+[01:57.10] Abrázame
+[01:58.50] Como hace el atardecer
+[02:03.82] Con tintes dorados
+[02:07.08] De cielos pasados
+[02:09.74] Hasta anochecer
+[02:14.46] Sé que te he hecho sentir
+[02:17.72] Que todo va a estallar
+[02:20.50] Permíteme insistir
+[02:23.22] No quise hacerlo mal
+[02:25.48] Perdóname si yo
+[02:28.18] Te habré causado alguna herida
+[02:34.34] Y ahora te digo
+[02:39.80] No te preocupes, mi amor
+[02:43.78] Escucha cada latido
+[02:47.64] Que te habla al oído
+[02:50.70] Mi corazón
+[02:54.20] Y si me encuentras perdido
+[03:00.30] Sólo es por una razón
+[03:04.20] Es que he desaparecido
+[03:08.04] Si falta tu abrigo
+[03:10.57] A mi corazón
+[03:13.42]
+</script>
+
+<script>
+/* =====================================================================
+   2) CONFIGURACIÓN
+   ===================================================================== */
+const CONFIG = {
+  audio:   'cancion.mp3',
+  titulo:  'Abrázame',
+  artista: 'Siddhartha',
+  // Tu mensaje. Usa \n para un salto de línea.
+  mensaje: 'Sinceramente no soy bueno para escribir,\nnunca se me vienen las palabras a la mente.\nQuisiera escribirte muchísimas cosas,\nque las ideas fluyeran solas y que fuera más fácil hacerlo.\nSolo quería decirte que en este tiempo que hemos estado saliendo\nme he sentido muy feliz y muy a gusto contigo.\nMe siento tranquilo, me siento bien.\nMe gusta pensar que es igual para ti.\nPareciera que vamos muy rápido con esto,\npero genuinamente he estado pensando muchísimo y quiero estar contigo.\nNo se me hace raro decirte que te amo, porque realmente lo siento.\nY creo que es lo único que quiero decirte: que te amo.\nBueno... y una cosa más.',
+  // Al terminar, las letras de la canción se reacomodan para formar esto. Usa \n para un salto de línea.
+  pregunta: 'Andrea,\n¿quieres ser\nmi novia?',
+  // Segundo en que el mensaje debe quedar completo (null = al terminar la última línea de la letra).
+  terminarEn: null,
+};
+</script>
+
+<div id="bg"><i></i><i></i><i></i></div>
+<div id="app">
+  <div id="lyrics"><div id="track"></div></div>
+  <div id="msg"><div id="msgText"></div></div>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="times"><span id="cur">0:00</span><span id="rem">-0:00</span></div>
+  <button id="pp" aria-label="Pausa"><svg class="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></button>
+</div>
+<div id="end"><button id="again">Volver a escuchar</button></div>
+
+<div id="hint">♥ Toca para escuchar</div>
+<div id="finale"></div>
+
+<div id="sync">
+  <h2>Modo sincronizar</h2>
+  <p>1. Pega la letra abajo, una línea por renglón. Deja un renglón vacío donde haya un instrumental largo (también se marca con un toque: ahí termina la línea anterior).</p>
+  <textarea id="src" placeholder="Pega aquí la letra…"></textarea>
+  <p>2. Dale <b>Empezar</b> y toca el botón grande (o la barra espaciadora) justo cuando <b>empieza</b> a cantarse cada línea. <b>Deshacer</b> (o Retroceso) borra el último toque.</p>
+  <audio id="syncAudio" controls preload="auto"></audio>
+  <div class="row"><button id="go">Empezar</button><button id="undo">Deshacer</button></div>
+  <div id="now"></div><div id="upnext"></div>
+  <button id="tap">Marcar línea</button>
+  <p style="margin-top:14px">3. Copia el resultado y pégalo dentro de <code>&lt;script id="letra"&gt;</code> en index.html.</p>
+  <textarea id="out" readonly></textarea>
+  <div class="row"><button id="copy">Copiar</button><a href="./" style="color:var(--glow);align-self:center">Probar la página →</a></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const isLetter = ch => /[a-z0-9]/.test(norm(ch));
+const fmt = t => { const m = Math.floor(t / 60), s = (t - m * 60).toFixed(2).padStart(5, '0'); return `[${String(m).padStart(2, '0')}:${s}]`; };
+
+if (params.has('sync')) initSync(); else initKaraoke();
+
+/* ============================ KARAOKE ============================ */
+function parseLRC(txt) {
+  const out = [];
+  for (const raw of txt.split(/\r?\n/)) {
+    const tags = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    if (!tags.length) continue;
+    const text = raw.replace(/\[[^\]]*\]/g, '').trim();
+    for (const m of tags) out.push({ t: +m[1] * 60 + +m[2], text });
+  }
+  out.sort((a, b) => a.t - b.t);
+  out.forEach((l, i) => {
+    l.chars = Array.from(l.text);
+    const next = out[i + 1] ? out[i + 1].t : l.t + l.chars.length * 0.22 + 1.5;
+    // Si la siguiente línea tarda mucho, se asume que esta se canta a ritmo normal y luego hay silencio.
+    l.end = next - l.t > 10 ? l.t + Math.min(next - l.t, l.chars.length * 0.22 + 1.5) : next - 0.1;
+  });
+  return out;
+}
+
+function initKaraoke() {
+  const lines = parseLRC($('#letra').textContent);
+  const sung = lines.filter(l => l.text);
+  const firstT = sung.length ? sung[0].t : 0;
+  const finishT = CONFIG.terminarEn ?? (sung.length ? sung[sung.length - 1].end : 60);
+
+  
+  document.title = CONFIG.titulo;
+
+  // --- Letra ---
+  const track = $('#track');
+  lines.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'line' + (l.text ? '' : ' gap');
+    if (l.text) {
+      l.spans = l.chars.map(ch => {
+        const s = document.createElement('span');
+        s.className = 'c'; s.textContent = ch; div.appendChild(s); return s;
+      });
+    } else div.textContent = '• • •';
+    track.appendChild(div); l.el = div;
+  });
+
+  // --- Mensaje ---
+  const slots = [];
+  const msgText = $('#msgText');
+  CONFIG.mensaje.split('\n').forEach((row, ri) => {
+    if (ri) msgText.appendChild(document.createElement('br'));
+    row.split(' ').forEach((word, wi) => {
+      if (wi) { const sp = { ch: ' ', letter: false, el: document.createTextNode(' ') }; msgText.appendChild(sp.el); slots.push(sp); }
+      const w = document.createElement('span'); w.className = 'w';
+      Array.from(word).forEach(ch => {
+        const el = document.createElement('span'); el.className = 'm'; el.textContent = ch;
+        w.appendChild(el); slots.push({ ch, letter: isLetter(ch), el });
+      });
+      msgText.appendChild(w);
+    });
+  });
+  const totalLetters = slots.filter(s => s.letter).length;
+
+  let next = 0, sent = 0, lastForce = 0;
+  const reveal = s => s.el.classList && s.el.classList.add('on');
+  function skipAuto() { while (next < slots.length && !slots[next].letter) reveal(slots[next++]); }
+
+  function fly(fromEl, slot, ch) {
+    const box = $('#msg');
+    const want = Math.min(box.scrollHeight - box.clientHeight, Math.max(0, slot.el.offsetTop - box.clientHeight * .55));
+    const dy = want > box.scrollTop ? want - box.scrollTop : 0;
+    if (dy) box.scrollTo({ top: want, behavior: 'smooth' });
+    const a = fromEl.getBoundingClientRect(), r = slot.el.getBoundingClientRect();
+    const b = { left: r.left, top: r.top - dy, width: r.width, height: r.height };
+    const f = document.createElement('span');
+    f.className = 'fly'; f.textContent = ch;
+    f.style.fontSize = getComputedStyle(slot.el).fontSize;
+    document.body.appendChild(f);
+    const fr = f.getBoundingClientRect();
+    const sx = a.left + a.width / 2 - fr.width / 2, sy = a.top + a.height / 2 - fr.height / 2;
+    const ex = b.left + b.width / 2 - fr.width / 2, ey = b.top + b.height / 2 - fr.height / 2;
+    const mx = (sx + ex) / 2 + (Math.random() - .5) * 120, my = Math.min(sy, ey) - 40;
+    const k = Math.max(.6, a.height / Math.max(1, b.height));
+    f.animate([
+      { transform: `translate(${sx}px,${sy}px) scale(${k})`, opacity: 0 },
+      { transform: `translate(${sx}px,${sy}px) scale(${k * 1.3})`, opacity: 1, offset: .12 },
+      { transform: `translate(${mx}px,${my}px) scale(1.4) rotate(${(Math.random() - .5) * 40}deg)`, opacity: 1, offset: .5 },
+      { transform: `translate(${ex}px,${ey}px) scale(1)`, opacity: 1 },
+    ], { duration: 1300, easing: 'cubic-bezier(.45,.05,.35,1)' }).onfinish = () => { f.remove(); reveal(slot); };
+  }
+
+  function send(fromEl) {
+    skipAuto();
+    if (next >= slots.length) return;
+    const slot = slots[next++]; sent++;
+    fly(fromEl, slot, slot.ch);
+    skipAuto();
+  }
+
+  // Cuántas letras del mensaje "deberían" estar formadas a este segundo, para repartirlas en toda la canción.
+  const allowance = t => Math.ceil(totalLetters * Math.min(1, Math.max(0, (t - firstT) / Math.max(1, finishT - firstT))));
+
+  function onSung(ch, el, t) {
+    skipAuto();
+    if (next >= slots.length || sent >= allowance(t)) return;
+    if (norm(ch) === norm(slots[next].ch)) send(el);
+  }
+
+  // --- Reproducción ---
+  const audio = new Audio(CONFIG.audio);
+  audio.preload = 'auto';
+  const hint = $('#hint');
+  audio.addEventListener('error', () => { hint.textContent = 'No encontré el archivo de la canción.'; hint.classList.add('show'); });
+
+  let active = -1, sungIdx = -1, finishing = false;
+  function setActive(i) {
+    if (active >= 0) {
+      const p = lines[active];
+      p.el.classList.remove('active'); p.el.classList.add('done');
+      p.spans && p.spans.forEach(s => s.classList.add('s'));
+    }
+    active = i; sungIdx = -1;
+    if (i < 0) return;
+    const l = lines[i];
+    l.el.classList.add('active');
+    // Las líneas lejanas a la actual se ven más borrosas.
+    lines.forEach((o, j) => { o.el.style.filter = j === i ? '' : `blur(${Math.min(Math.abs(j - i), 4) * .7}px)`; });
+    track.style.transform = `translateY(${-(l.el.offsetTop + l.el.offsetHeight / 2)}px)`;
+  }
+
+  function finishAll() {
+    if (finishing) return; finishing = true;
+    const tick = () => {
+      skipAuto();
+      // Si faltan muchas letras, se colocan más rápido para no hacer esperar.
+      if (next < slots.length) { send($('#track')); setTimeout(tick, Math.max(25, Math.min(140, 3000 / (slots.length - next)))); }
+      else setTimeout(finale, 1800);
+    };
+    tick();
+  }
+
+  // Las letras de la canción salen volando y se reacomodan para formar la pregunta.
+  function finale() {
+    const box = $('#lyrics').getBoundingClientRect(), fin = $('#finale');
+    Object.assign(fin.style, { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' });
+    const targets = [];
+    CONFIG.pregunta.split('\n').forEach(row => {
+      const d = document.createElement('div'); d.className = 'q';
+      Array.from(row).forEach(ch => {
+        const s = document.createElement('span'); s.textContent = ch === ' ' ? '\u00a0' : ch; d.appendChild(s);
+        if (ch !== ' ') targets.push({ ch, el: s });
+      });
+      fin.appendChild(d);
+    });
+    // Primero se usan las letras que están a la vista.
+    const inView = s => { const r = s.getBoundingClientRect(); return r.bottom > box.top && r.top < box.bottom; };
+    const pool = lines.flatMap(l => l.spans || []).filter(s => isLetter(s.textContent));
+    pool.sort((a, b) => inView(b) - inView(a));
+    const used = new Set(), step = 110, t0 = 400;
+    targets.forEach((tg, k) => {
+      const src = isLetter(tg.ch) && pool.find(s => !used.has(s) && norm(s.textContent) === norm(tg.ch));
+      if (src) used.add(src);
+      setTimeout(() => {
+        if (!src) { tg.el.classList.add('on'); return; }
+        const a = src.getBoundingClientRect(), b = tg.el.getBoundingClientRect();
+        src.style.visibility = 'hidden';
+        const f = document.createElement('span');
+        f.className = 'fly q2'; f.textContent = tg.ch;
+        f.style.fontSize = getComputedStyle(tg.el).fontSize;
+        document.body.appendChild(f);
+        const fr = f.getBoundingClientRect();
+        const sx = a.left + a.width / 2 - fr.width / 2, sy = a.top + a.height / 2 - fr.height / 2;
+        const ex = b.left + b.width / 2 - fr.width / 2, ey = b.top + b.height / 2 - fr.height / 2;
+        const k0 = Math.max(.4, a.height / Math.max(1, b.height));
+        f.animate([
+          { transform: `translate(${sx}px,${sy}px) scale(${k0})` },
+          { transform: `translate(${(sx + ex) / 2 + (Math.random() - .5) * 160}px,${(sy + ey) / 2 + (Math.random() - .5) * 120}px) scale(1.25) rotate(${(Math.random() - .5) * 50}deg)`, offset: .55 },
+          { transform: `translate(${ex}px,${ey}px) scale(1)` },
+        ], { duration: 1700, easing: 'cubic-bezier(.45,.05,.3,1)' }).onfinish = () => { f.remove(); tg.el.classList.add('on'); };
+      }, t0 + k * step);
+    });
+    setTimeout(() => $('#track').classList.add('out'), t0 + targets.length * step * .4);
+    const end = $('#end'); end.style.top = (box.bottom - 64) + 'px'; end.style.bottom = 'auto';
+    setTimeout(() => { fin.classList.add('glow'); end.classList.add('show'); }, t0 + targets.length * step + 2600);
+  }
+
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  function frame() {
+    const t = audio.currentTime, dur = audio.duration || 0;
+    if (dur) {
+      $('#fill').style.width = `${(t / dur) * 100}%`;
+      $('#cur').textContent = mmss(t); $('#rem').textContent = '-' + mmss(dur - t);
+    }
+    let i = active;
+    while (i + 1 < lines.length && lines[i + 1].t <= t) i++;
+    if (i !== active) setActive(i);
+
+    const l = lines[active];
+    if (l && l.spans) {
+      const p = (t - l.t) / Math.max(.1, l.end - l.t);
+      const n = Math.min(l.spans.length, Math.floor(p * l.spans.length + 0.5));
+      while (sungIdx + 1 < n) {
+        sungIdx++;
+        l.spans[sungIdx].classList.add('s');
+        onSung(l.chars[sungIdx], l.spans[sungIdx], t);
+      }
+    }
+
+    // Red de seguridad: si una letra del mensaje no aparece pronto en la canción, se coloca sola.
+    const now = performance.now();
+    if (!finishing && allowance(t) - sent >= Math.max(3, totalLetters * .06) && now - lastForce > 500) {
+      lastForce = now; send(l && l.el || track);
+    }
+    if (!finishing && (t > finishT + 1.5 || audio.ended)) finishAll();
+    if (!audio.paused || finishing) requestAnimationFrame(frame);
+  }
+
+  audio.addEventListener('play', () => requestAnimationFrame(frame));
+  audio.addEventListener('ended', finishAll);
+
+  if (params.has('desde')) audio.currentTime = +params.get('desde');
+  // Intenta arrancar sola. Si el navegador exige un toque, el primer toque en cualquier parte la inicia.
+  const start = () => audio.play().then(() => hint.classList.remove('show'));
+  start().catch(() => {
+    hint.classList.add('show');
+    const go = () => start().then(() => ['click', 'touchend'].forEach(e => document.removeEventListener(e, go))).catch(() => {});
+    ['click', 'touchend'].forEach(e => document.addEventListener(e, go));
+  });
+  $('#pp').addEventListener('click', () => {
+    if (audio.ended) return;
+    if (audio.paused) audio.play(); else audio.pause();
+  });
+  audio.addEventListener('play', () => $('#pp').classList.remove('paused'));
+  audio.addEventListener('pause', () => $('#pp').classList.add('paused'));
+  $('#again').addEventListener('click', () => location.reload());
+}
+
+/* ============================ SINCRONIZAR ============================ */
+function initSync() {
+  $('#app').style.display = 'none'; $('#end').style.display = 'none';
+  $('#sync').style.display = 'block';
+  const audio = $('#syncAudio'); audio.src = CONFIG.audio;
+  let rows = [], stamps = [];
+
+  // Recupera lo último que pegaste, por si recargas la página.
+  try { $('#src').value = localStorage.getItem('abrazame-src') || ''; } catch {}
+  $('#src').addEventListener('input', () => { try { localStorage.setItem('abrazame-src', $('#src').value); } catch {} });
+
+  function render() {
+    $('#now').textContent = stamps.length ? '✓ ' + (rows[stamps.length - 1] || '(silencio)') : '';
+    $('#upnext').textContent = stamps.length < rows.length ? 'Siguiente: ' + (rows[stamps.length] || '(silencio)') : (rows.length ? '¡Listo!' : '');
+    $('#out').value = stamps.map((t, i) => `${fmt(t)} ${rows[i]}`.trimEnd()).join('\n');
+  }
+  function tap() { if (stamps.length < rows.length) { stamps.push(audio.currentTime); render(); } }
+  function undo() { stamps.pop(); render(); }
+
+  $('#go').onclick = () => {
+    // Varios renglones vacíos seguidos cuentan como un solo silencio.
+    rows = $('#src').value.split(/\r?\n/).map(s => s.trim())
+      .filter((s, i, a) => s || (i > 0 && a[i - 1] && i < a.length - 1));
+    stamps = []; audio.currentTime = 0; audio.play(); render();
+  };
+  $('#tap').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
+  $('#undo').onclick = undo;
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); tap(); }
+    if (e.code === 'Backspace') { e.preventDefault(); undo(); }
+  });
+  $('#copy').onclick = () => navigator.clipboard.writeText($('#out').value);
+}
+</script>
+</body>
+</html>
